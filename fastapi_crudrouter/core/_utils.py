@@ -1,11 +1,15 @@
-from typing import Optional, Type, TypeVar, Any
+from typing import Optional, Type, Any
 
 from fastapi import Depends, HTTPException
 from pydantic import create_model
 
-from ._types import PAGINATION, PYDANTIC_SCHEMA
+from ._types import T, PAGINATION, PYDANTIC_SCHEMA
 
-T = TypeVar("T", bound=PYDANTIC_SCHEMA)
+
+class AttrDict(dict):  # type: ignore
+    def __init__(self, *args, **kwargs) -> None:  # type: ignore
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
 
 
 def get_pk_type(schema: Type[PYDANTIC_SCHEMA], pk_field: str) -> Any:
@@ -29,7 +33,7 @@ def schema_factory(
     }
 
     name = schema_cls.__name__ + name
-    schema = create_model(__model_name=name, **fields)  # type: ignore
+    schema: Type[T] = create_model(__model_name=name, **fields)  # type: ignore
     return schema
 
 

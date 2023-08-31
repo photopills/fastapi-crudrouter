@@ -14,13 +14,14 @@ CREATE_ONE = "Overloaded Post One"
 UPDATE_ONE = "Overloaded Update One"
 DELETE_ONE = "Overloaded Delete One"
 DELETE_ALL = "Overloaded Delete All"
+CUSTOM_ROUTE = "Custom Route"
 
 
 @pytest.fixture(params=implementations, scope="class")
 def overloaded_client(request):
-    impl = request.param
+    impl, dsn = request.param
 
-    app, router, settings = impl()
+    app, router, settings = impl(db_uri=dsn)
     routers = [router(**s) for s in settings]
 
     for r in routers:
@@ -49,6 +50,10 @@ def overloaded_client(request):
         @r.api_route("", methods=["DELETE"])
         def overloaded_delete():
             return DELETE_ALL
+
+        @r.post("/custom")
+        def custom_route():
+            return CUSTOM_ROUTE
 
         app.include_router(r)
 
@@ -86,3 +91,6 @@ class TestOverloads:
 
     def test_delete_all(self, overloaded_client, url):
         self.check_response(overloaded_client.delete(url), DELETE_ALL)
+
+    def test_custom_route(self, overloaded_client, url):
+        self.check_response(overloaded_client.post(f"{url}/custom"), CUSTOM_ROUTE)

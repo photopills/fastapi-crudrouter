@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Any, Callable, Generic, List, Optional, Type, Union
 
 from fastapi import APIRouter, HTTPException
@@ -9,7 +10,7 @@ from ._utils import pagination_factory, schema_factory
 NOT_FOUND = HTTPException(404, "Item not found")
 
 
-class CRUDGenerator(Generic[T], APIRouter):
+class CRUDGenerator(Generic[T], APIRouter, ABC):
     schema: Type[T]
     create_schema: Type[T]
     update_schema: Type[T]
@@ -90,6 +91,7 @@ class CRUDGenerator(Generic[T], APIRouter):
                 response_model=self.response_model or self.schema,
                 summary="Get One",
                 dependencies=get_one_route,
+                error_responses=[NOT_FOUND],
             )
 
         if update_route:
@@ -100,6 +102,7 @@ class CRUDGenerator(Generic[T], APIRouter):
                 response_model=self.response_model or self.schema,
                 summary="Update One",
                 dependencies=update_route,
+                error_responses=[NOT_FOUND],
             )
 
         if delete_one_route:
@@ -110,6 +113,7 @@ class CRUDGenerator(Generic[T], APIRouter):
                 response_model=self.response_model or self.schema,
                 summary="Delete One",
                 dependencies=delete_one_route,
+                error_responses=[NOT_FOUND],
             )
 
     def _add_api_route(
@@ -117,10 +121,19 @@ class CRUDGenerator(Generic[T], APIRouter):
         path: str,
         endpoint: Callable[..., Any],
         dependencies: Union[bool, DEPENDENCIES],
+        error_responses: Optional[List[HTTPException]] = None,
         **kwargs: Any,
     ) -> None:
         dependencies = [] if isinstance(dependencies, bool) else dependencies
-        super().add_api_route(path, endpoint, dependencies=dependencies, **kwargs)
+        responses: Any = (
+            {err.status_code: {"detail": err.detail} for err in error_responses}
+            if error_responses
+            else None
+        )
+
+        super().add_api_route(
+            path, endpoint, dependencies=dependencies, responses=responses, **kwargs
+        )
 
     def api_route(
         self, path: str, *args: Any, **kwargs: Any
@@ -164,23 +177,32 @@ class CRUDGenerator(Generic[T], APIRouter):
             ):
                 self.routes.remove(route)
 
+    @abstractmethod
     def _get_all(self, *args: Any, **kwargs: Any) -> Callable[..., Any]:
         raise NotImplementedError
 
+    @abstractmethod
     def _get_one(self, *args: Any, **kwargs: Any) -> Callable[..., Any]:
         raise NotImplementedError
 
+    @abstractmethod
     def _create(self, *args: Any, **kwargs: Any) -> Callable[..., Any]:
         raise NotImplementedError
 
+    @abstractmethod
     def _update(self, *args: Any, **kwargs: Any) -> Callable[..., Any]:
         raise NotImplementedError
 
+    @abstractmethod
     def _delete_one(self, *args: Any, **kwargs: Any) -> Callable[..., Any]:
         raise NotImplementedError
 
+    @abstractmethod
     def _delete_all(self, *args: Any, **kwargs: Any) -> Callable[..., Any]:
         raise NotImplementedError
+
+    def _raise(self, e: Exception, status_code: int = 422) -> HTTPException:
+        raise HTTPException(422, ", ".join(e.args)) from e
 
     @staticmethod
     def get_routes() -> List[str]:

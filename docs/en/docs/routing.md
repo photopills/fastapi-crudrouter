@@ -43,7 +43,7 @@ are shown below.
 
 As an example, the *delete all* route can be disabled by doing the following:
 ```python
-router = MemmoryCRUDRouter(schema=MyModel, deleta_all_route=False)
+router = MemoryCRUDRouter(schema=MyModel, delete_all_route=False)
 ```
 
 !!! tip "Custom Dependencies"
@@ -81,7 +81,7 @@ class Potato(BaseModel):
     mass: float
 
 app = FastAPI()
-router = CRUDRouter(model=mymodel)
+router = CRUDRouter(schema=Potato)
 
 @router.get('')
 def overloaded_get_all():
@@ -90,4 +90,6 @@ def overloaded_get_all():
 @router.get('/{item_id}')
 def overloaded_get_one():
     return 'My overloaded route that returns one item'
+
+app.include_router(router)
 ```
