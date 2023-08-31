@@ -27,10 +27,11 @@ def schema_factory(
     """
 
     fields = {
-        f.name: (f.type_, ...)
-        for f in schema_cls.__fields__.values()
-        if f.name != pk_field_name
+        fname: (finfo.annotation, ...)
+        for fname, finfo in schema_cls.model_fields.items()
+        if fname != pk_field_name
     }
+
 
     name = schema_cls.__name__ + name
     schema: Type[T] = create_model(__model_name=name, **fields)  # type: ignore
