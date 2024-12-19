@@ -1,4 +1,5 @@
-from typing import Any, Callable, List, Type, cast, Coroutine, Optional, Union
+from typing import Any, cast
+from collections.abc import Callable, Coroutine
 
 from . import CRUDGenerator, NOT_FOUND
 from ._types import DEPENDENCIES, PAGINATION, PYDANTIC_SCHEMA as SCHEMA
@@ -13,26 +14,26 @@ else:
 
 
 CALLABLE = Callable[..., Coroutine[Any, Any, Model]]
-CALLABLE_LIST = Callable[..., Coroutine[Any, Any, List[Model]]]
+CALLABLE_LIST = Callable[..., Coroutine[Any, Any, list[Model]]]
 
 
 class TortoiseCRUDRouter(CRUDGenerator[SCHEMA]):
     def __init__(
         self,
-        schema: Type[SCHEMA],
-        db_model: Type[Model],
-        create_schema: Optional[Type[SCHEMA]] = None,
-        update_schema: Optional[Type[SCHEMA]] = None,
-        prefix: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        paginate: Optional[int] = None,
-        get_all_route: Union[bool, DEPENDENCIES] = True,
-        get_one_route: Union[bool, DEPENDENCIES] = True,
-        create_route: Union[bool, DEPENDENCIES] = True,
-        update_route: Union[bool, DEPENDENCIES] = True,
-        delete_one_route: Union[bool, DEPENDENCIES] = True,
-        delete_all_route: Union[bool, DEPENDENCIES] = True,
-        **kwargs: Any
+        schema: type[SCHEMA],
+        db_model: type[Model],
+        create_schema: type[SCHEMA] | None = None,
+        update_schema: type[SCHEMA] | None = None,
+        prefix: str | None = None,
+        tags: list[str] | None = None,
+        paginate: int | None = None,
+        get_all_route: bool | DEPENDENCIES = True,
+        get_one_route: bool | DEPENDENCIES = True,
+        create_route: bool | DEPENDENCIES = True,
+        update_route: bool | DEPENDENCIES = True,
+        delete_one_route: bool | DEPENDENCIES = True,
+        delete_all_route: bool | DEPENDENCIES = True,
+        **kwargs: Any,
     ) -> None:
         assert (
             tortoise_installed
@@ -54,11 +55,11 @@ class TortoiseCRUDRouter(CRUDGenerator[SCHEMA]):
             update_route=update_route,
             delete_one_route=delete_one_route,
             delete_all_route=delete_all_route,
-            **kwargs
+            **kwargs,
         )
 
     def _get_all(self, *args: Any, **kwargs: Any) -> CALLABLE_LIST:
-        async def route(pagination: PAGINATION = self.pagination) -> List[Model]:
+        async def route(pagination: PAGINATION = self.pagination) -> list[Model]:
             skip, limit = pagination.get("skip"), pagination.get("limit")
             query = self.db_model.all().offset(cast(int, skip))
             if limit:
@@ -89,7 +90,8 @@ class TortoiseCRUDRouter(CRUDGenerator[SCHEMA]):
 
     def _update(self, *args: Any, **kwargs: Any) -> CALLABLE:
         async def route(
-            item_id: int, model: self.update_schema  # type: ignore
+            item_id: int,
+            model: self.update_schema,  # type: ignore
         ) -> Model:
             await self.db_model.filter(id=item_id).update(
                 **model.dict(exclude_unset=True)
@@ -99,7 +101,7 @@ class TortoiseCRUDRouter(CRUDGenerator[SCHEMA]):
         return route
 
     def _delete_all(self, *args: Any, **kwargs: Any) -> CALLABLE_LIST:
-        async def route() -> List[Model]:
+        async def route() -> list[Model]:
             await self.db_model.all().delete()
             return await self._get_all()(pagination={"skip": 0, "limit": None})
 

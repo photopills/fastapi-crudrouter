@@ -1,13 +1,7 @@
 from typing import (
     Any,
-    Callable,
-    List,
-    Mapping,
-    Type,
-    Coroutine,
-    Optional,
-    Union,
 )
+from collections.abc import Callable, Coroutine, Mapping
 
 from fastapi import HTTPException
 
@@ -27,13 +21,11 @@ else:
 
 Model = Mapping[Any, Any]
 CALLABLE = Callable[..., Coroutine[Any, Any, Model]]
-CALLABLE_LIST = Callable[..., Coroutine[Any, Any, List[Model]]]
+CALLABLE_LIST = Callable[..., Coroutine[Any, Any, list[Model]]]
 
 
-def pydantify_record(
-    models: Union[Model, List[Model]]
-) -> Union[AttrDict, List[AttrDict]]:
-    if type(models) is list:
+def pydantify_record(models: Model | list[Model]) -> AttrDict | list[AttrDict]:
+    if isinstance(models, list):
         return [AttrDict(**dict(model)) for model in models]
     else:
         return AttrDict(**dict(models))  # type: ignore
@@ -42,21 +34,21 @@ def pydantify_record(
 class DatabasesCRUDRouter(CRUDGenerator[PYDANTIC_SCHEMA]):
     def __init__(
         self,
-        schema: Type[PYDANTIC_SCHEMA],
+        schema: type[PYDANTIC_SCHEMA],
         table: "Table",
         database: "Database",
-        create_schema: Optional[Type[PYDANTIC_SCHEMA]] = None,
-        update_schema: Optional[Type[PYDANTIC_SCHEMA]] = None,
-        prefix: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        paginate: Optional[int] = None,
-        get_all_route: Union[bool, DEPENDENCIES] = True,
-        get_one_route: Union[bool, DEPENDENCIES] = True,
-        create_route: Union[bool, DEPENDENCIES] = True,
-        update_route: Union[bool, DEPENDENCIES] = True,
-        delete_one_route: Union[bool, DEPENDENCIES] = True,
-        delete_all_route: Union[bool, DEPENDENCIES] = True,
-        **kwargs: Any
+        create_schema: type[PYDANTIC_SCHEMA] | None = None,
+        update_schema: type[PYDANTIC_SCHEMA] | None = None,
+        prefix: str | None = None,
+        tags: list[str] | None = None,
+        paginate: int | None = None,
+        get_all_route: bool | DEPENDENCIES = True,
+        get_one_route: bool | DEPENDENCIES = True,
+        create_route: bool | DEPENDENCIES = True,
+        update_route: bool | DEPENDENCIES = True,
+        delete_one_route: bool | DEPENDENCIES = True,
+        delete_all_route: bool | DEPENDENCIES = True,
+        **kwargs: Any,
     ) -> None:
         assert (
             databases_installed
@@ -81,13 +73,13 @@ class DatabasesCRUDRouter(CRUDGenerator[PYDANTIC_SCHEMA]):
             update_route=update_route,
             delete_one_route=delete_one_route,
             delete_all_route=delete_all_route,
-            **kwargs
+            **kwargs,
         )
 
     def _get_all(self, *args: Any, **kwargs: Any) -> CALLABLE_LIST:
         async def route(
             pagination: PAGINATION = self.pagination,
-        ) -> List[Model]:
+        ) -> list[Model]:
             skip, limit = pagination.get("skip"), pagination.get("limit")
 
             query = self.table.select().limit(limit).offset(skip)
@@ -126,7 +118,8 @@ class DatabasesCRUDRouter(CRUDGenerator[PYDANTIC_SCHEMA]):
 
     def _update(self, *args: Any, **kwargs: Any) -> CALLABLE:
         async def route(
-            item_id: self._pk_type, schema: self.update_schema  # type: ignore
+            item_id: self._pk_type,
+            schema: self.update_schema,  # type: ignore
         ) -> Model:
             query = self.table.update().where(self._pk_col == item_id)
 
@@ -141,7 +134,7 @@ class DatabasesCRUDRouter(CRUDGenerator[PYDANTIC_SCHEMA]):
         return route
 
     def _delete_all(self, *args: Any, **kwargs: Any) -> CALLABLE_LIST:
-        async def route() -> List[Model]:
+        async def route() -> list[Model]:
             query = self.table.delete()
             await self.db.execute(query=query)
 

@@ -1,13 +1,8 @@
 from typing import (
     Any,
-    Callable,
-    List,
-    Optional,
-    Type,
     cast,
-    Coroutine,
-    Union,
 )
+from collections.abc import Coroutine, Callable
 
 from fastapi import HTTPException
 
@@ -24,25 +19,25 @@ else:
     ormar_installed = True
 
 CALLABLE = Callable[..., Coroutine[Any, Any, Model]]
-CALLABLE_LIST = Callable[..., Coroutine[Any, Any, List[Optional[Model]]]]
+CALLABLE_LIST = Callable[..., Coroutine[Any, Any, list[Model] | None]]
 
 
 class OrmarCRUDRouter(CRUDGenerator[Model]):
     def __init__(
         self,
-        schema: Type[Model],
-        create_schema: Optional[Type[Model]] = None,
-        update_schema: Optional[Type[Model]] = None,
-        prefix: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        paginate: Optional[int] = None,
-        get_all_route: Union[bool, DEPENDENCIES] = True,
-        get_one_route: Union[bool, DEPENDENCIES] = True,
-        create_route: Union[bool, DEPENDENCIES] = True,
-        update_route: Union[bool, DEPENDENCIES] = True,
-        delete_one_route: Union[bool, DEPENDENCIES] = True,
-        delete_all_route: Union[bool, DEPENDENCIES] = True,
-        **kwargs: Any
+        schema: type[Model],
+        create_schema: type[Model] | None = None,
+        update_schema: type[Model] | None = None,
+        prefix: str | None = None,
+        tags: list[str] | None = None,
+        paginate: int | None = None,
+        get_all_route: bool | DEPENDENCIES = True,
+        get_one_route: bool | DEPENDENCIES = True,
+        create_route: bool | DEPENDENCIES = True,
+        update_route: bool | DEPENDENCIES = True,
+        delete_one_route: bool | DEPENDENCIES = True,
+        delete_all_route: bool | DEPENDENCIES = True,
+        **kwargs: Any,
     ) -> None:
         assert ormar_installed, "Ormar must be installed to use the OrmarCRUDRouter."
 
@@ -62,7 +57,7 @@ class OrmarCRUDRouter(CRUDGenerator[Model]):
             update_route=update_route,
             delete_one_route=delete_one_route,
             delete_all_route=delete_all_route,
-            **kwargs
+            **kwargs,
         )
 
         self._INTEGRITY_ERROR = self._get_integrity_error_type()
@@ -70,7 +65,7 @@ class OrmarCRUDRouter(CRUDGenerator[Model]):
     def _get_all(self, *args: Any, **kwargs: Any) -> CALLABLE_LIST:
         async def route(
             pagination: PAGINATION = self.pagination,
-        ) -> List[Optional[Model]]:
+        ) -> list[Model | None]:
             skip, limit = pagination.get("skip"), pagination.get("limit")
             query = self.schema.objects.offset(cast(int, skip))
             if limit:
@@ -121,7 +116,7 @@ class OrmarCRUDRouter(CRUDGenerator[Model]):
         return route
 
     def _delete_all(self, *args: Any, **kwargs: Any) -> CALLABLE_LIST:
-        async def route() -> List[Optional[Model]]:
+        async def route() -> list[Model | None]:
             await self.schema.objects.delete(each=True)
             return await self._get_all()(pagination={"skip": 0, "limit": None})
 
@@ -135,7 +130,7 @@ class OrmarCRUDRouter(CRUDGenerator[Model]):
 
         return route
 
-    def _get_integrity_error_type(self) -> Type[Exception]:
+    def _get_integrity_error_type(self) -> type[Exception]:
         """Imports the Integrity exception based on the used backend"""
         backend = self.schema.db_backend_name()
 

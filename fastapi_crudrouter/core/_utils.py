@@ -1,7 +1,8 @@
-from typing import Optional, Type, Any
+from typing import Any
 
 from fastapi import Depends, HTTPException
 from pydantic import create_model
+from pydantic_core.core_schema import model_fields_schema
 
 from ._types import T, PAGINATION, PYDANTIC_SCHEMA
 
@@ -12,16 +13,16 @@ class AttrDict(dict):  # type: ignore
         self.__dict__ = self
 
 
-def get_pk_type(schema: Type[PYDANTIC_SCHEMA], pk_field: str) -> Any:
+def get_pk_type(schema: type[PYDANTIC_SCHEMA], pk_field: str) -> Any:
     try:
-        return schema.__fields__[pk_field].type_
+        return model_fields_schema[pk_field].type_
     except KeyError:
         return int
 
 
 def schema_factory(
-    schema_cls: Type[T], pk_field_name: str = "id", name: str = "Create"
-) -> Type[T]:
+    schema_cls: type[T], pk_field_name: str = "id", name: str = "Create"
+) -> type[T]:
     """
     Is used to create a CreateSchema which does not contain pk
     """
@@ -34,7 +35,7 @@ def schema_factory(
 
 
     name = schema_cls.__name__ + name
-    schema: Type[T] = create_model(__model_name=name, **fields)  # type: ignore
+    schema: type[T] = create_model(name, **fields)  # type: ignore
     return schema
 
 
@@ -49,12 +50,12 @@ def create_query_validation_exception(field: str, msg: str) -> HTTPException:
     )
 
 
-def pagination_factory(max_limit: Optional[int] = None) -> Any:
+def pagination_factory(max_limit: int | None = None) -> Any:
     """
     Created the pagination dependency to be used in the router
     """
 
-    def pagination(skip: int = 0, limit: Optional[int] = max_limit) -> PAGINATION:
+    def pagination(skip: int = 0, limit: int | None = max_limit) -> PAGINATION:
         if skip < 0:
             raise create_query_validation_exception(
                 field="skip",

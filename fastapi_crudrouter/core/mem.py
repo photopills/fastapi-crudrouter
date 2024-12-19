@@ -1,27 +1,27 @@
-from typing import Any, Callable, List, Type, cast, Optional, Union
-
+from typing import Any, cast
+from collections.abc import Callable
 from . import CRUDGenerator, NOT_FOUND
 from ._types import DEPENDENCIES, PAGINATION, PYDANTIC_SCHEMA as SCHEMA
 
 CALLABLE = Callable[..., SCHEMA]
-CALLABLE_LIST = Callable[..., List[SCHEMA]]
+CALLABLE_LIST = Callable[..., list[SCHEMA]]
 
 
 class MemoryCRUDRouter(CRUDGenerator[SCHEMA]):
     def __init__(
         self,
-        schema: Type[SCHEMA],
-        create_schema: Optional[Type[SCHEMA]] = None,
-        update_schema: Optional[Type[SCHEMA]] = None,
-        prefix: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        paginate: Optional[int] = None,
-        get_all_route: Union[bool, DEPENDENCIES] = True,
-        get_one_route: Union[bool, DEPENDENCIES] = True,
-        create_route: Union[bool, DEPENDENCIES] = True,
-        update_route: Union[bool, DEPENDENCIES] = True,
-        delete_one_route: Union[bool, DEPENDENCIES] = True,
-        delete_all_route: Union[bool, DEPENDENCIES] = True,
+        schema: type[SCHEMA],
+        create_schema: type[SCHEMA] | None = None,
+        update_schema: type[SCHEMA] | None = None,
+        prefix: str | None = None,
+        tags: list[str] | None = None,
+        paginate: int | None = None,
+        get_all_route: bool | DEPENDENCIES = True,
+        get_one_route: bool | DEPENDENCIES = True,
+        create_route: bool | DEPENDENCIES = True,
+        update_route: bool | DEPENDENCIES = True,
+        delete_one_route: bool | DEPENDENCIES = True,
+        delete_all_route: bool | DEPENDENCIES = True,
         **kwargs: Any
     ) -> None:
         super().__init__(
@@ -40,11 +40,11 @@ class MemoryCRUDRouter(CRUDGenerator[SCHEMA]):
             **kwargs
         )
 
-        self.models: List[SCHEMA] = []
+        self.models: list[SCHEMA] = []
         self._id = 1
 
     def _get_all(self, *args: Any, **kwargs: Any) -> CALLABLE_LIST:
-        def route(pagination: PAGINATION = self.pagination) -> List[SCHEMA]:
+        def route(pagination: PAGINATION = self.pagination) -> list[SCHEMA]:
             skip, limit = pagination.get("skip"), pagination.get("limit")
             skip = cast(int, skip)
 
@@ -90,7 +90,7 @@ class MemoryCRUDRouter(CRUDGenerator[SCHEMA]):
         return route
 
     def _delete_all(self, *args: Any, **kwargs: Any) -> CALLABLE_LIST:
-        def route() -> List[SCHEMA]:
+        def route() -> list[SCHEMA]:
             self.models = []
             return self.models
 

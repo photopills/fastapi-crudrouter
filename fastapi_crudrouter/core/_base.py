@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, List, Optional, Type, Union
+from typing import Any, Generic
+from collections.abc import Callable
 
 from fastapi import APIRouter, HTTPException
 from fastapi.types import DecoratedCallable
@@ -11,25 +12,25 @@ NOT_FOUND = HTTPException(404, "Item not found")
 
 
 class CRUDGenerator(Generic[T], APIRouter, ABC):
-    schema: Type[T]
-    create_schema: Type[T]
-    update_schema: Type[T]
+    schema: type[T]
+    create_schema: type[T]
+    update_schema: type[T]
     _base_path: str = "/"
 
     def __init__(
         self,
-        schema: Type[T],
-        create_schema: Optional[Type[T]] = None,
-        update_schema: Optional[Type[T]] = None,
-        prefix: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        paginate: Optional[int] = None,
-        get_all_route: Union[bool, DEPENDENCIES] = True,
-        get_one_route: Union[bool, DEPENDENCIES] = True,
-        create_route: Union[bool, DEPENDENCIES] = True,
-        update_route: Union[bool, DEPENDENCIES] = True,
-        delete_one_route: Union[bool, DEPENDENCIES] = True,
-        delete_all_route: Union[bool, DEPENDENCIES] = True,
+        schema: type[T],
+        create_schema: type[T] | None = None,
+        update_schema: type[T] | None = None,
+        prefix: str | None = None,
+        tags: list[str] | None = None,
+        paginate: int | None = None,
+        get_all_route: bool | DEPENDENCIES = True,
+        get_one_route: bool | DEPENDENCIES = True,
+        create_route: bool | DEPENDENCIES = True,
+        update_route: bool | DEPENDENCIES = True,
+        delete_one_route: bool | DEPENDENCIES = True,
+        delete_all_route: bool | DEPENDENCIES = True,
         **kwargs: Any,
     ) -> None:
 
@@ -58,7 +59,7 @@ class CRUDGenerator(Generic[T], APIRouter, ABC):
                 "",
                 self._get_all(),
                 methods=["GET"],
-                response_model=self.response_model or Optional[List[self.schema]],  # type: ignore
+                response_model=self.response_model or list[self.schema] | None,  # type: ignore
                 summary="Get All",
                 dependencies=get_all_route,
             )
@@ -78,7 +79,7 @@ class CRUDGenerator(Generic[T], APIRouter, ABC):
                 "",
                 self._delete_all(),
                 methods=["DELETE"],
-                response_model=self.response_model or Optional[List[self.schema]],  # type: ignore
+                response_model=self.response_model or list[self.schema] | None,  # type: ignore
                 summary="Delete All",
                 dependencies=delete_all_route,
             )
@@ -120,8 +121,8 @@ class CRUDGenerator(Generic[T], APIRouter, ABC):
         self,
         path: str,
         endpoint: Callable[..., Any],
-        dependencies: Union[bool, DEPENDENCIES],
-        error_responses: Optional[List[HTTPException]] = None,
+        dependencies: bool | DEPENDENCIES,
+        error_responses: list[HTTPException] | None = None,
         **kwargs: Any,
     ) -> None:
         dependencies = [] if isinstance(dependencies, bool) else dependencies
@@ -167,7 +168,7 @@ class CRUDGenerator(Generic[T], APIRouter, ABC):
         self.remove_api_route(path, ["DELETE"])
         return super().delete(path, *args, **kwargs)
 
-    def remove_api_route(self, path: str, methods: List[str]) -> None:
+    def remove_api_route(self, path: str, methods: list[str]) -> None:
         methods_ = set(methods)
 
         for route in self.routes:
@@ -205,5 +206,5 @@ class CRUDGenerator(Generic[T], APIRouter, ABC):
         raise HTTPException(422, ", ".join(e.args)) from e
 
     @staticmethod
-    def get_routes() -> List[str]:
+    def get_routes() -> list[str]:
         return ["get_all", "create", "delete_all", "get_one", "update", "delete_one"]
